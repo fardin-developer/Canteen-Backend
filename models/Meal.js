@@ -1,5 +1,6 @@
 // models/Meal.js: Defines the schema for the 'Meal' document in MongoDB using Mongoose.
 
+const { required } = require("joi");
 const mongoose = require("mongoose");
 
 const MealSchema = new mongoose.Schema(
@@ -34,17 +35,14 @@ const MealSchema = new mongoose.Schema(
       required: [true, "Please provide meal category"], // Category is required
       enum: ["breakfast", "lunch", "snacks","juice","others"], // Enumerates the possible values for category
     },
+    stock:{
+      type:String,
+      required:[true,"Please enter availability of stock"],
+      enum:["available","unavailable"]
+    },
     featured: {
       type: Boolean,
       default: false, // Specifies whether the meal is featured or not
-    },
-    freeShipping: {
-      type: Boolean,
-      default: false, // Specifies whether the meal includes free shipping
-    },
-    availability: {
-      type: Boolean,
-      default: true, // Availability of the meal
     },
     averageRating: {
       type: Number,

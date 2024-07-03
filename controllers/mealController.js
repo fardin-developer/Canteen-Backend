@@ -10,6 +10,7 @@ const path = require("path"); // Node.js path module for file path operations.
  */
 const createMeal = async (req, res) => {
   // req.body.user = req.body.user; // Assign the meal to the logged-in user.
+  console.log(req.body);
   const meal = await Meal.create(req.body); // Create the meal document.
   res.status(StatusCodes.CREATED).json({ meal }); // Respond with the created meal.
 };

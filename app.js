@@ -32,6 +32,7 @@ const userRouter = require("./routes/userRoutes");
 const mealRouter = require("./routes/mealRoutes");
 const reviewRouter = require("./routes/reviewRoutes");
 const orderRouter = require("./routes/orderRoutes");
+const category = require('./routes/category')
 
 // Middleware for handling not found and error handling
 const notFoundMiddleware = require("./middleware/not-found");
@@ -69,6 +70,7 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/meals", mealRouter);
 app.use("/api/v1/reviews", reviewRouter);
 app.use("/api/v1/orders", orderRouter);
+app.use("/api/v1/category", category);
 
 // Middleware to handle requests for non-existent routes
 app.use(notFoundMiddleware);

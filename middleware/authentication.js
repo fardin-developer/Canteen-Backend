@@ -14,6 +14,7 @@ const { isTokenValid } = require("../utils"); // Utility function to validate JW
 const authenticateUser = async (req, res, next) => {
   // Extract token from Authorization header
   const authHeader = req.headers.authorization;
+  console.log(authHeader)
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     throw new CustomError.UnauthenticatedError("Authentication Invalid");
   }
