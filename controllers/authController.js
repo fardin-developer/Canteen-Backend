@@ -3,7 +3,7 @@
 const User = require("../models/User"); // Importing the User model for database operations
 const { StatusCodes } = require("http-status-codes"); // Importing HTTP status codes for response status
 const CustomError = require("../errors"); // Custom error handling utilities
-const { attachCookiesToResponse, createTokenUser } = require("../utils"); // Utility functions for token management and response handling
+const { attachCookiesToResponse, tokenParams } = require("../utils"); // Utility functions for token management and response handling
 
 /**
  * Registers a new user with the provided email, name, and password. Automatically assigns
@@ -11,12 +11,10 @@ const { attachCookiesToResponse, createTokenUser } = require("../utils"); // Uti
  * newly created user object.
  */
 const register = async (req, res) => {
-  const { email, name, password } = req.body; // Extracting user details from request body
+  const { email, name, password,dept,rollno } = req.body; // Extracting user details from request body
 
   // Check if email already exists in the database
   const emailAlreadyExists = await User.findOne({ email });
-  console.log(email)
-  console.log(email)
   if (emailAlreadyExists) {
     throw new CustomError.BadRequestError("Email already exists");
   }
@@ -26,14 +24,10 @@ const register = async (req, res) => {
   const role = isFirstAccount ? "admin" : "user"; // Assign role based on account order
 
   // Create new user with provided details and assigned role
-  const user = await User.create({ name, email, password, role });
-  // res.json({
-  //   success:true,
-  //   data:user
-  // })
-  const tokenUser = createTokenUser(user); // Create a token user object for cookie
-  attachCookiesToResponse({ res, user: tokenUser }); // Attach token to response as a cookie
-  res.status(StatusCodes.CREATED).json({ user: tokenUser });
+  const user = await User.create({ name, email, password, role,dept,rollno });
+  const tokenUserDetails = tokenParams(user); // Create a token user object for cookie
+  const data = attachCookiesToResponse({ res, user: tokenUserDetails });
+  res.status(StatusCodes.CREATED).json({ user: user,cookies: data });
 };
 
 /**
@@ -60,9 +54,9 @@ const login = async (req, res) => {
     throw new CustomError.UnauthenticatedError("Invalid Credentials");
   }
 
-  const tokenUser = createTokenUser(user); // Create a token user object for cookie
+  const tokenUser = tokenParams(user); // Create a token user object for cookie
   const data = attachCookiesToResponse({ res, user: tokenUser }); // Attach token to response as a cookie
-  res.status(StatusCodes.OK).json({ user: tokenUser, cookies:data });
+  res.status(StatusCodes.OK).json({ user: user, cookies:data });
 };
 
 /**

@@ -16,13 +16,14 @@ const {
 router
   .route("/")
   .post(authenticateUser, createOrder)
-  .get(authenticateUser, authorizePermissions("admin"), getAllOrders);
+  .get( getAllOrders);
 
 router.route("/showAllMyOrders").get(authenticateUser, getCurrentUserOrders);
 
 router
   .route("/:id")
   .get(authenticateUser, getSingleOrder)
-  .patch(authenticateUser, updateOrder);
+  // .patch(authenticateUser, updateOrder);
+   .patch(updateOrder);
 
 module.exports = router;

@@ -28,6 +28,14 @@ const UserSchema = new mongoose.Schema({
     required: [true, "Please provide password"],
     minlength: 6,
   },
+  dept: {
+    type: String,
+    required: [true, "Please provide dept."],
+  },
+  rollno: {
+    type: String,
+    required: [true, "Please provide roll number"],
+  },
   role: {
     type: String,
     /// what possible values the property can have.
