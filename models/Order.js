@@ -4,6 +4,7 @@ const singleOrderItemSchema = mongoose.Schema({
   name: { type: String, required: true },
   image: { type: String, required: true },
   price: { type: Number, required: true },
+  cost: { type: Number, required: true },
   amount: { type: Number, required: true },
   product: {
     type: mongoose.Schema.ObjectId,
@@ -16,6 +17,10 @@ const OrderSchema = mongoose.Schema(
   {
 
     subtotal: {
+      type: Number,
+      required: true,
+    },
+    totalcost: {
       type: Number,
       required: true,
     },

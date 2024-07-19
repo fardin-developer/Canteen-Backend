@@ -3,7 +3,8 @@
 const User = require("../models/User"); // Importing the User model for database operations
 const { StatusCodes } = require("http-status-codes"); // Importing HTTP status codes for response status
 const CustomError = require("../errors"); // Custom error handling utilities
-const { attachCookiesToResponse, tokenParams } = require("../utils"); // Utility functions for token management and response handling
+const { attachCookiesToResponse, tokenParams } = require("../utils"); 
+const {isTokenValid} = require('../utils/jwt')
 
 /**
  * Registers a new user with the provided email, name, and password. Automatically assigns
@@ -36,6 +37,8 @@ const register = async (req, res) => {
  */
 const login = async (req, res) => {
   const { email, password } = req.body; // Extracting credentials from request body
+  console.log('printttt hitttt');
+  console.log(email,password);
 
   // Validate input
   if (!email || !password) {
@@ -70,9 +73,24 @@ const logout = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: "user logged out" });
 };
 
+const jwtVerify = (req,res)=>{
+  console.log('jwtVerify');
+  const token = req.query.token;
+  console.log('tokk '+token);
+  const { name, userId, role } = isTokenValid({ token });
+  res.status(StatusCodes.OK).json({
+    user:{
+      name,
+      userId,
+      role
+    }
+  })
+}
+
 // Exporting the controller functions to be used in routes
 module.exports = {
   register,
   login,
   logout,
+  jwtVerify
 };

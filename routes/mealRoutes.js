@@ -19,7 +19,7 @@ const { getSingleMealReviews } = require("../controllers/reviewController");
 router
   .route("/")
   .post( createMeal)
-  .get([authenticateUser],getAllMeals);
+  .get(getAllMeals);
 
   
 

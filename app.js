@@ -7,7 +7,10 @@ require("express-async-errors");
 // Importing core modules
 const express = require("express");
 const cors = require('cors');
-const app = express(); // Creating an Express application instance
+const app = express();
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
+
 
 app.use(cors({
   origin: 'http://localhost:5173', // URL of your frontend
@@ -32,7 +35,9 @@ const userRouter = require("./routes/userRoutes");
 const mealRouter = require("./routes/mealRoutes");
 const reviewRouter = require("./routes/reviewRoutes");
 const orderRouter = require("./routes/orderRoutes");
-const category = require('./routes/category')
+const category = require('./routes/category');
+const payment = require('./routes/paymentRoute')
+const dashboard = require('./routes/dashboard')
 
 // Middleware for handling not found and error handling
 const notFoundMiddleware = require("./middleware/not-found");
@@ -71,6 +76,8 @@ app.use("/api/v1/meals", mealRouter);
 app.use("/api/v1/reviews", reviewRouter);
 app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/category", category);
+app.use("/api/v1/payment", payment);
+app.use("/api/v1/dashboard", dashboard);
 
 // Middleware to handle requests for non-existent routes
 app.use(notFoundMiddleware);

@@ -1,73 +1,98 @@
-// orderController.js: Manages order-related operations including creation, retrieval, and update of orders.
-
 const Order = require('../models/Order') // Importing the Order model.
 const Meal = require('../models/Meal') // Importing the Meal model for order item references.
 const User = require('../models/User')
+const Payment = require('../models/Payment')
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
+const mongoose = require('mongoose');
+const razorpay = new Razorpay({
+  key_id: 'rzp_test_oicgEyGT9bn0Fi',
+  key_secret: 'A7fOm4SVDoJVGCxZIiXmmSf0',
+});
 
-const { StatusCodes } = require('http-status-codes') // HTTP status codes for standardized responses.
-const CustomError = require('../errors') // Custom error handling utilities.
-const { checkPermissions } = require('../utils') // Utility function for permission checking.
+const { StatusCodes } = require('http-status-codes') 
+const CustomError = require('../errors') 
+const { checkPermissions } = require('../utils') 
 
-// Simulated Stripe API for demonstration purposes. In a production environment, you would replace this
-// with real payment processing logic.
-const fakeStripeAPI = async ({ amount, currency }) => {
-  const client_secret = 'RandomSecret'
-  return { client_secret, amount }
-}
-
-/**
- * Creates a new order with the items specified in the request body, calculates the total cost,
- * and simulates a payment intent creation using a fake Stripe API.
- */
 const createOrder = async (req, res) => {
   const { items: cartItems } = req.body
-  console.log(cartItems)
-  // Validate the order details.
   if (!cartItems || cartItems.length < 1) {
     throw new CustomError.BadRequestError('There are no items in the cart')
   }
 
-  // Process each item in the order.
   let orderItems = []
-  let subtotal = 0
+  let subtotal = 0;
+  let totalcost = 0;
   for (const item of cartItems) {
     const dbMeal = await Meal.findOne({ _id: item.meal })
     if (!dbMeal) {
       throw new CustomError.NotFoundError(`No meal with id: ${item.meal}`)
     }
-    console.log(dbMeal)
-    const { name, price, image, _id } = dbMeal
+    // console.log(dbMeal)
+    const { name, price,cost, image, _id } = dbMeal
     const singleOrderItem = {
       amount: item.amount,
       name,
       price,
+      cost,
       image,
       product: _id
     }
     orderItems.push(singleOrderItem)
-    subtotal += item.amount * price
+    subtotal += item.amount * price;
+    totalcost += item.amount * cost
   }
 
   // Calculate the total cost and simulate payment intent.
   const total = subtotal
-  const paymentIntent = await fakeStripeAPI({
-    amount: total,
-    currency: 'us'
-  })
+
 
   // Create the order in the database.
   const order = await Order.create({
     orderItems,
     total,
     subtotal,
-    client: paymentIntent.client_secret,
+    totalcost,
+    client: 'paymentIntent.client_secret',
     user: req.user.userId
   })
 
+  const razorpayOrder = await razorpay.orders.create({
+    amount: total * 100, 
+    currency: 'INR',
+    receipt: order._id,
+    payment_capture: 1,
+  });
+  const payment = new Payment({
+    id: new mongoose.Types.ObjectId().toString(),
+    order_id: order._id.toString(),
+    user_id: req.user.userId,
+    amount: total,
+    payment_method: 'razorpay',
+    payment_status: 'pending',
+    transaction_id: razorpayOrder.id,
+    created_at: new Date(),
+    updated_at: new Date(),
+  });
+  await payment.save()
+
   res
     .status(StatusCodes.CREATED)
-    .json({ order, clientSecret: order.clientSecret })
+    .json({
+      order,
+      razorpayOrderId: razorpayOrder.id,
+    })
 }
+
+
+
+
+
+
+
+
+
+
 
 /**
  * Retrieves all orders from the database.
@@ -76,14 +101,14 @@ const getAllOrders = async (req, res) => {
   const statusQuery = req.query.status
   if (statusQuery && (statusQuery === 'pending' || statusQuery === 'paid' ||
     statusQuery === 'delivered' || statusQuery === 'failed')) {
-      const orders = await Order.find({ status: statusQuery })
-      res.status(StatusCodes.OK).json({ orders, count: orders.length })
+    const orders = await Order.find({ status: statusQuery })
+    res.status(StatusCodes.OK).json({ orders, count: orders.length })
 
-  }else{
+  } else {
     const orders = await Order.find({}).populate('user', 'name email')
     res.status(StatusCodes.OK).json({ orders, count: orders.length })
   }
-  
+
 }
 
 /**

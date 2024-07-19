@@ -8,6 +8,7 @@ const {
   register,
   login,
   logout,
+  jwtVerify
 } = require("../controllers/authController");
 
 // Route for user registration. Utilizes the 'register' controller function
@@ -24,6 +25,7 @@ router.get("/logout", logout);
 
 // Additional route to serve documentation as a static HTML file.
 // This route serves the 'docs.html' file located in the same directory.
+router.get("/jwt-verify", jwtVerify);
 router.get("/docs", (req, res) => {
   // Send the docs.html file to the client
   res.sendFile(__dirname + "/docs.html");
