@@ -12,9 +12,9 @@ const razorpay = new Razorpay({
 const moment = require('moment');
 
 
-const { StatusCodes } = require('http-status-codes') 
-const CustomError = require('../errors') 
-const { checkPermissions } = require('../utils') 
+const { StatusCodes } = require('http-status-codes')
+const CustomError = require('../errors')
+const { checkPermissions } = require('../utils')
 
 const createOrder = async (req, res) => {
   const { items: cartItems } = req.body
@@ -31,7 +31,7 @@ const createOrder = async (req, res) => {
       throw new CustomError.NotFoundError(`No meal with id: ${item.meal}`)
     }
     // console.log(dbMeal)
-    const { name,description, price,cost, image, _id } = dbMeal
+    const { name, description, price, cost, image, _id } = dbMeal
     const singleOrderItem = {
       amount: item.amount,
       name,
@@ -60,12 +60,12 @@ const createOrder = async (req, res) => {
     user: req.user.userId
   })
 
-  const razorpayOrder = await razorpay.orders.create({
-    amount: total * 100, 
-    currency: 'INR',
-    receipt: order._id,
-    payment_capture: 1,
-  });
+  // const razorpayOrder = await razorpay.orders.create({
+  //   amount: total * 100, 
+  //   currency: 'INR',
+  //   receipt: order._id,
+  //   payment_capture: 1,
+  // });
   const payment = new Payment({
     id: new mongoose.Types.ObjectId().toString(),
     order_id: order._id.toString(),
@@ -73,24 +73,20 @@ const createOrder = async (req, res) => {
     amount: total,
     payment_method: 'razorpay',
     payment_status: 'pending',
-    transaction_id: razorpayOrder.id,
+    transaction_id: 'null',
     created_at: new Date(),
     updated_at: new Date(),
   });
   await payment.save()
 
+
   res
     .status(StatusCodes.CREATED)
     .json({
       order,
-      razorpayOrderId: razorpayOrder.id,
+      payment: payment._id,
     })
 }
-
-
-
-
-
 
 
 
@@ -104,7 +100,7 @@ const getAllOrders = async (req, res) => {
   const statusQuery = req.query.status
   if (statusQuery && (statusQuery === 'pending' || statusQuery === 'paid' ||
     statusQuery === 'delivered' || statusQuery === 'failed')) {
-    const orders = await Order.find({ status: statusQuery })
+    const orders = await Order.find({ status: statusQuery }).populate('user', 'name email')
     res.status(StatusCodes.OK).json({ orders, count: orders.length })
 
   } else {
@@ -155,7 +151,7 @@ const getCurrentUserOrders = async (req, res) => {
       }
       break;
     default:
-      start = new Date(0); 
+      start = new Date(0);
   }
 
   const orders = await Order.find({
@@ -175,21 +171,29 @@ const getCurrentUserOrders = async (req, res) => {
 const updateOrder = async (req, res) => {
   const { id: orderId } = req.params
   const statusQuery = req.query.status
-  console.log(statusQuery);
+  const transactionId = req.query.payment
+  // console.log(statusQuery);
 
-  // const { paymentIntentId } = req.body;
+  const { paymentIntentId } = req.body;
   console.log(orderId)
 
   const order = await Order.findOne({ _id: orderId })
   if (!order) {
     throw new CustomError.NotFoundError(`No order with id : ${orderId}`)
   }
-  // checkPermissions(req.user, order.user); // Verify user permission to update the order.
+  order.status = statusQuery;
+  await order.save();
 
-  // Update the order status.
-  // order.paymentIntentId = paymentIntentId;
-  order.status = statusQuery
-  await order.save()
+  if (statusQuery === 'paid') {
+    const payment = await Payment.findOne({ order_id: orderId });
+    console.log(payment);
+    if (!payment) {
+      throw new CustomError.NotFoundError(`No order with id : ${orderId}`)
+    }
+    payment.transaction_id = transactionId;
+    await payment.save();
+    res.status(StatusCodes.OK).json({ order, payment })
+  }
 
   res.status(StatusCodes.OK).json({ order })
 }

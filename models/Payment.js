@@ -7,7 +7,7 @@ const paymentSchema = new Schema({
         require:true
     },
     order_id: {
-        type: String,
+      type: mongoose.Schema.Types.ObjectId,
         required: true
     },
     user_id: {
