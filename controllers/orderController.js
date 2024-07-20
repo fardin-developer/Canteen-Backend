@@ -9,6 +9,8 @@ const razorpay = new Razorpay({
   key_id: 'rzp_test_oicgEyGT9bn0Fi',
   key_secret: 'A7fOm4SVDoJVGCxZIiXmmSf0',
 });
+const moment = require('moment');
+
 
 const { StatusCodes } = require('http-status-codes') 
 const CustomError = require('../errors') 
@@ -29,10 +31,11 @@ const createOrder = async (req, res) => {
       throw new CustomError.NotFoundError(`No meal with id: ${item.meal}`)
     }
     // console.log(dbMeal)
-    const { name, price,cost, image, _id } = dbMeal
+    const { name,description, price,cost, image, _id } = dbMeal
     const singleOrderItem = {
       amount: item.amount,
       name,
+      description,
       price,
       cost,
       image,
@@ -128,9 +131,43 @@ const getSingleOrder = async (req, res) => {
  * Retrieves all orders placed by the currently authenticated user.
  */
 const getCurrentUserOrders = async (req, res) => {
-  const orders = await Order.find({ user: req.user.userId })
-  res.status(StatusCodes.OK).json({ orders, count: orders.length })
-}
+  const { range, startDate, endDate } = req.query;
+  let start;
+  let end = new Date();
+  console.log(startDate);
+
+  switch (range) {
+    case 'lastWeek':
+      start = moment().subtract(7, 'days').toDate();
+      break;
+    case 'lastMonth':
+      start = moment().subtract(1, 'months').toDate();
+      break;
+    case 'lastYear':
+      start = moment().subtract(1, 'years').toDate();
+      break;
+    case 'custom':
+      if (startDate && endDate) {
+        start = new Date(startDate);
+        end = new Date(endDate);
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({ msg: 'Invalid custom date range' });
+      }
+      break;
+    default:
+      start = new Date(0); 
+  }
+
+  const orders = await Order.find({
+    user: req.user.userId,
+    createdAt: {
+      $gte: start,
+      $lte: end
+    }
+  });
+
+  res.status(StatusCodes.OK).json({ orders, count: orders.length });
+};
 
 /**
  * Updates the status of an order to 'paid' once the payment is completed.
