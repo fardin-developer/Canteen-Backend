@@ -1,37 +1,79 @@
 const Order = require('../models/Order')
 const Payment = require('../models/Payment')
+const Product = require('../models/Meal')
 const Meal = require('../models/Meal')
 
 
 
 const dashboardData = async (req, res) => {
-    try {
-        const orderAggregation = await Order.aggregate([
-            {
-                $group: {
-                    _id: null,
-                    totalPrice: { $sum: "$total" },
-                    totalcost: { $sum: "$totalcost" }
-                }
-            }
-        ]);
-        const order = await Order.find();
-        console.log(orderAggregation);
-        const totalPrice = orderAggregation[0] ? orderAggregation[0].totalPrice : 0;
-        const totalcost = orderAggregation[0] ? orderAggregation[0].totalcost : 0;
+  try {
+    // Get the start of the current day (12:00 AM)
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
 
-        //   console.log(order);
-        res.json({
-            order,
-            totalPrice,
-            totalcost,
-            totalOrder: order.length
-        });
-    } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        res.status(500).json({ message: "Server error" });
+    // Aggregate total price and total cost for paid orders
+    const orderAggregation = await Order.aggregate([
+      {
+        $match: { status: "paid" }
+      },
+      {
+        $group: {
+          _id: null,
+          totalPrice: { $sum: "$total" },
+          totalcost: { $sum: "$totalcost" }
+        }
+      }
+    ]);
+
+    // Find all orders
+    const allOrders = await Order.find();
+
+    // Find today's paid orders
+    const todaysOrders = await Order.find({
+      updatedAt: { $gte: startOfToday }, status: { $in: ['paid', 'delivered'] }
+    });
+
+    // Initialize an empty array to hold daily sales data
+    const dailySales = [];
+
+    // Process each order to accumulate daily sales data
+    for (const order of todaysOrders) {
+      for (const item of order.orderItems) {
+        const product = await Product.findById(item.product);
+        const existingItem = dailySales.find(sale => sale.name === item.name);
+
+        if (existingItem) {
+          existingItem.sales += item.price * item.amount;
+          existingItem.items += item.amount;
+        } else {
+          dailySales.push({
+            id: item._id.toString(),
+            name: item.name,
+            category: product.category, // Use the actual category from the product
+            sales: item.price * item.amount,
+            items: item.amount
+          });
+        }
+      }
     }
+
+    const totalPrice = orderAggregation[0] ? orderAggregation[0].totalPrice : 0;
+    const totalcost = orderAggregation[0] ? orderAggregation[0].totalcost : 0;
+
+    res.json({
+      order: allOrders,
+      totalPrice,
+      totalcost,
+      totalOrder: allOrders.length,
+      todaysOrders: dailySales
+    });
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
+
+
 
 const analytics = async (req, res) => {
   try {
@@ -41,7 +83,8 @@ const analytics = async (req, res) => {
     const dailySales = await Order.aggregate([
       {
         $match: {
-          createdAt: { $gte: sevenDaysAgo }
+          createdAt: { $gte: sevenDaysAgo },
+          status: "paid"
         }
       },
       {
@@ -79,7 +122,7 @@ const analytics = async (req, res) => {
 };
 
 
-  
+
 
 
 

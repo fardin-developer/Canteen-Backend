@@ -3,8 +3,8 @@
 const User = require("../models/User"); // Importing the User model for database operations
 const { StatusCodes } = require("http-status-codes"); // Importing HTTP status codes for response status
 const CustomError = require("../errors"); // Custom error handling utilities
-const { attachCookiesToResponse, tokenParams } = require("../utils"); 
-const {isTokenValid} = require('../utils/jwt')
+const { attachCookiesToResponse, tokenParams } = require("../utils");
+const { isTokenValid } = require('../utils/jwt')
 
 /**
  * Registers a new user with the provided email, name, and password. Automatically assigns
@@ -12,24 +12,24 @@ const {isTokenValid} = require('../utils/jwt')
  * newly created user object.
  */
 const register = async (req, res) => {
-  const { email, name, password,dept,rollno } = req.body; // Extracting user details from request body
+  const { email, name, password, dept, rollno } = req.body;
+  const studentID = req.file ? req.file.path : null;
+  console.log(req.file);
 
-  // Check if email already exists in the database
   const emailAlreadyExists = await User.findOne({ email });
   if (emailAlreadyExists) {
     throw new CustomError.BadRequestError("Email already exists");
   }
 
-  // Determine if the new account is the first account
   const isFirstAccount = (await User.countDocuments({})) === 0;
-  const role = isFirstAccount ? "admin" : "user"; // Assign role based on account order
+  const role = isFirstAccount ? "admin" : "user";
 
-  // Create new user with provided details and assigned role
-  const user = await User.create({ name, email, password, role,dept,rollno });
-  const tokenUserDetails = tokenParams(user); // Create a token user object for cookie
-  const data = attachCookiesToResponse({ res, user: tokenUserDetails });
-  res.status(StatusCodes.CREATED).json({ user: user,cookies: data });
+  const user = await User.create({ name, email, password, role, dept, rollno, studentID });
+  const tokenUserDetails = tokenParams(user);
+  attachCookiesToResponse({ res, user: tokenUserDetails });
+  res.status(StatusCodes.CREATED).json({ user });
 };
+
 
 /**
  * Logs in a user by validating the provided email and password. If successful, responds
@@ -38,29 +38,40 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body; // Extracting credentials from request body
   console.log('printttt hitttt');
-  console.log(email,password);
+  console.log(email, password);
 
-  // Validate input
-  if (!email || !password) {
-    throw new CustomError.BadRequestError("Please provide email and password");
+  try {
+    // Validate input
+    if (!email || !password) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ error: "Please provide email and password" });
+    }
+
+    // Attempt to find the user by email
+    const user = await User.findOne({ email });
+    console.log(user && !user.verified)
+    if (user && !user.verified) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({ error: "user not verified by admin",status:'not verified' });
+    }
+    if (!user) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid Credentials" });
+    }
+
+    // Validate password
+    const isPasswordCorrect = await user.comparePassword(password);
+    if (!isPasswordCorrect) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid Credentials" });
+    }
+
+    const tokenUser = tokenParams(user); // Create a token user object for cookie
+    const data = attachCookiesToResponse({ res, user: tokenUser }); // Attach token to response as a cookie
+    res.status(StatusCodes.OK).json({ user: user, cookies: data });
+
+  } catch (error) {
+    console.error(error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "An error occurred. Please try again later." });
   }
-
-  // Attempt to find the user by email
-  const user = await User.findOne({ email });
-  if (!user) {
-    throw new CustomError.UnauthenticatedError("Invalid Credentials");
-  }
-
-  // Validate password
-  const isPasswordCorrect = await user.comparePassword(password);
-  if (!isPasswordCorrect) {
-    throw new CustomError.UnauthenticatedError("Invalid Credentials");
-  }
-
-  const tokenUser = tokenParams(user); // Create a token user object for cookie
-  const data = attachCookiesToResponse({ res, user: tokenUser }); // Attach token to response as a cookie
-  res.status(StatusCodes.OK).json({ user: user, cookies:data });
 };
+
 
 /**
  * Logs out the current user by clearing the authentication cookie.
@@ -73,13 +84,13 @@ const logout = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: "user logged out" });
 };
 
-const jwtVerify = (req,res)=>{
+const jwtVerify = (req, res) => {
   console.log('jwtVerify');
   const token = req.query.token;
-  console.log('tokk '+token);
+  console.log('tokk ' + token);
   const { name, userId, role } = isTokenValid({ token });
   res.status(StatusCodes.OK).json({
-    user:{
+    user: {
       name,
       userId,
       role

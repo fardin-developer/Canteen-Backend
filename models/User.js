@@ -8,7 +8,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, "Please provide name"],
     minlength: 3,
-    maxLength: 30,
+    maxlength: 30,
   },
   email: {
     type: String,
@@ -19,9 +19,9 @@ const UserSchema = new mongoose.Schema({
       message: "Please provide valid email",
     },
   },
-  verified:{
-    type:Boolean,
-    default:false
+  verified: {
+    type: Boolean,
+    default: false
   },
   password: {
     type: String,
@@ -36,13 +36,17 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, "Please provide roll number"],
   },
+  studentID: {
+    type: String,
+    required: [false, "Please provide an Id"],
+  },
   role: {
     type: String,
-    /// what possible values the property can have.
     enum: ["admin", "user"],
     default: "user",
   },
 });
+
 /// using save triggers the hook
 /// so it needs to be updated to only be triggered when the
 /// password is updated

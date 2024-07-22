@@ -98,9 +98,10 @@ const createOrder = async (req, res) => {
  */
 const getAllOrders = async (req, res) => {
   const statusQuery = req.query.status
+  const {limit} = req.query
   if (statusQuery && (statusQuery === 'pending' || statusQuery === 'paid' ||
     statusQuery === 'delivered' || statusQuery === 'failed')) {
-    const orders = await Order.find({ status: statusQuery }).populate('user', 'name email')
+    const orders = await Order.find({ status: statusQuery }).populate('user', 'name email').sort({ createdAt: -1 }).limit(limit);;
     res.status(StatusCodes.OK).json({ orders, count: orders.length })
 
   } else {

@@ -1,34 +1,33 @@
-// routes/authRoutes.js: Defines routes for user authentication including registration, login, and logout.
-
 const express = require("express");
 const router = express.Router(); // Create a new Express router to handle authentication routes
+const multer = require('multer');
+const {  register, login, logout, jwtVerify } = require("../controllers/authController");
+const path = require('path');
 
-// Import authentication controller functions
-const {
-  register,
-  login,
-  logout,
-  jwtVerify
-} = require("../controllers/authController");
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); 
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname); 
+    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9); 
+    cb(null, uniqueName + ext); 
+  }
+});
 
-// Route for user registration. Utilizes the 'register' controller function
-// to create a new user in the system.
-router.post("/register", register);
+const upload = multer({ storage: storage });
 
-// Route for user login. Uses the 'login' controller function
-// to authenticate users and issue a JWT for session management.
+router.post("/register", upload.single('idProof'), register);
+
+
 router.post("/login", login);
 
-// Route for user logout. The 'logout' controller function
-// clears the user's session and cookie.
 router.get("/logout", logout);
 
-// Additional route to serve documentation as a static HTML file.
-// This route serves the 'docs.html' file located in the same directory.
 router.get("/jwt-verify", jwtVerify);
 router.get("/docs", (req, res) => {
-  // Send the docs.html file to the client
+
   res.sendFile(__dirname + "/docs.html");
 });
 
-module.exports = router; // Export the router for use in the application's main entry point (typically app.js)
+module.exports = router; 
