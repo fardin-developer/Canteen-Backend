@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router(); // Create a new Express router to handle authentication routes
 const multer = require('multer');
-const {  register, login, logout, jwtVerify } = require("../controllers/authController");
+const {  register, login, logout, jwtVerify,updateProfile } = require("../controllers/authController");
 const path = require('path');
 
 const storage = multer.diskStorage({
@@ -25,6 +25,9 @@ router.post("/login", login);
 router.get("/logout", logout);
 
 router.get("/jwt-verify", jwtVerify);
+
+router.get('/update',updateProfile);
+
 router.get("/docs", (req, res) => {
 
   res.sendFile(__dirname + "/docs.html");

@@ -14,7 +14,7 @@ const { isTokenValid } = require('../utils/jwt')
 const register = async (req, res) => {
   const { email, name, password, dept, rollno } = req.body;
   const studentID = req.file ? req.file.path : null;
-  console.log(req.file);
+  // console.log(req.file);
 
   const emailAlreadyExists = await User.findOne({ email });
   if (emailAlreadyExists) {
@@ -50,7 +50,7 @@ const login = async (req, res) => {
     const user = await User.findOne({ email });
     console.log(user && !user.verified)
     if (user && !user.verified) {
-      return res.status(StatusCodes.UNAUTHORIZED).json({ error: "user not verified by admin",status:'not verified' });
+      return res.status(StatusCodes.UNAUTHORIZED).json({ error: "user not verified by admin", status: 'not verified' });
     }
     if (!user) {
       return res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid Credentials" });
@@ -85,7 +85,7 @@ const logout = async (req, res) => {
 };
 
 const jwtVerify = (req, res) => {
-  console.log('jwtVerify');
+  // console.log('jwtVerify');
   const token = req.query.token;
   console.log('tokk ' + token);
   const { name, userId, role } = isTokenValid({ token });
@@ -98,10 +98,41 @@ const jwtVerify = (req, res) => {
   })
 }
 
+const bcrypt = require('bcryptjs');
+
+const updateProfile = async (req, res) => {
+  const { name, token, password } = req.query;
+  const { userId, role } = isTokenValid({ token });
+
+  try {
+    const user = await User.findById({ _id: userId });
+    console.log(user);
+
+    if (token && name) {
+      user.name = name;
+      await user.save();
+      res.status(StatusCodes.OK).json({ user: user });
+    } else if (token && password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await password
+      await user.save();
+      res.status(StatusCodes.OK).json({ user: user });
+    } else {
+      res.status(StatusCodes.BAD_REQUEST).json({ error: "Invalid request" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "An error occurred. Please try again later." });
+  }
+};
+
+
+
 // Exporting the controller functions to be used in routes
 module.exports = {
   register,
   login,
   logout,
-  jwtVerify
+  jwtVerify,
+  updateProfile
 };

@@ -128,7 +128,8 @@ const getSingleOrder = async (req, res) => {
  * Retrieves all orders placed by the currently authenticated user.
  */
 const getCurrentUserOrders = async (req, res) => {
-  const { range, startDate, endDate } = req.query;
+  const { range, startDate, endDate,status } = req.query;
+  console.log(status);
   let start;
   let end = new Date();
   console.log(startDate);
@@ -160,7 +161,8 @@ const getCurrentUserOrders = async (req, res) => {
     createdAt: {
       $gte: start,
       $lte: end
-    }
+    },
+    status:status
   });
 
   res.status(StatusCodes.OK).json({ orders, count: orders.length });
@@ -192,6 +194,7 @@ const updateOrder = async (req, res) => {
       throw new CustomError.NotFoundError(`No order with id : ${orderId}`)
     }
     payment.transaction_id = transactionId;
+    payment.status = statusQuery
     await payment.save();
     res.status(StatusCodes.OK).json({ order, payment })
   }
