@@ -9,11 +9,29 @@ const path = require("path"); // Node.js path module for file path operations.
  * Creates a new meal document in the database with the provided details in the request body.
  */
 const createMeal = async (req, res) => {
-  // req.body.user = req.body.user; // Assign the meal to the logged-in user.
-  console.log(req.body);
-  const meal = await Meal.create(req.body); // Create the meal document.
-  res.status(StatusCodes.CREATED).json({ meal }); // Respond with the created meal.
+  try {
+    console.log(req.file);
+    console.log(req.body);
+
+    // // Generate image URL
+    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/Products/${req.file.filename}`;
+    req.body.image = imageUrl; // Add image URL to req.body
+    console.log(req.body.image);
+
+    // // Assign the meal to the logged-in user (assuming user ID is stored in req.user)
+    // req.body.user = req.user.id;
+
+    // Create the meal document
+    const meal = await Meal.create(req.body);
+
+    // Respond with the created meal
+    res.status(StatusCodes.CREATED).json({ meal });
+  } catch (error) {
+    console.error(error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Something went wrong' });
+  }
 };
+
 
 /**
  * Retrieves all meal documents from the database.

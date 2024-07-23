@@ -14,16 +14,19 @@ const dashboardData = async (req, res) => {
     // Aggregate total price and total cost for paid orders
     const orderAggregation = await Order.aggregate([
       {
-        $match: { status: "paid" }
+        $match: {
+          status: { $in: ["paid", "delivered"] }
+        }
       },
       {
         $group: {
           _id: null,
           totalPrice: { $sum: "$total" },
-          totalcost: { $sum: "$totalcost" }
+          totalCost: { $sum: "$totalcost" }
         }
       }
     ]);
+
 
     // Find all orders
     const allOrders = await Order.find();
@@ -49,7 +52,7 @@ const dashboardData = async (req, res) => {
           dailySales.push({
             id: item._id.toString(),
             name: item.name,
-            category: product.category, // Use the actual category from the product
+            category: product.category,
             sales: item.price * item.amount,
             items: item.amount
           });
@@ -58,7 +61,8 @@ const dashboardData = async (req, res) => {
     }
 
     const totalPrice = orderAggregation[0] ? orderAggregation[0].totalPrice : 0;
-    const totalcost = orderAggregation[0] ? orderAggregation[0].totalcost : 0;
+    const totalcost = orderAggregation[0] ? orderAggregation[0].totalCost : 0;
+    console.log(orderAggregation);
 
     res.json({
       order: allOrders,
@@ -74,6 +78,124 @@ const dashboardData = async (req, res) => {
 };
 
 
+const managerReport = async (req, res) => {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  console.log(startOfToday);
+
+  try {
+    const orders = await Order.find({
+      createdAt: {
+        $gte: startOfToday,
+        $lte: endOfToday
+      }
+    });
+    // console.log(orders);
+
+    let totalSales = 0;
+    let pendingOrder = 0;
+    let deliveredOrder = 0;
+    let totalItems = 0;
+    let paidOrder = 0;
+    let pendingAmount = 0;
+    let deliveredAmount = 0
+
+    orders.forEach(order => {
+      console.log(order.total);
+      if (order.status === 'paid') {
+        totalSales += order.total;
+        paidOrder++;
+      }
+      if (order.status === 'pending') {
+        pendingAmount += order.total
+        pendingOrder++;
+      }
+      if (order.status === 'delivered') {
+        totalSales += order.total
+        deliveredAmount += order.total
+        deliveredOrder++;
+      }
+      order.orderItems.forEach(item => {
+        totalItems += item.amount;
+      });
+    });
+    console.log("totalSales " + totalSales);
+
+    res.json({
+      totalSales,
+      pendingOrder,
+      deliveredOrder,
+      paidOrder,
+      totalItems,
+      pendingAmount,
+      deliveredAmount
+    });
+  } catch (error) {
+    console.error("Error fetching today's report:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
+const findBestSellingProducts = async (req, res) => {
+  try {
+    // Aggregate to find best selling products
+    const bestSellingProducts = await Order.aggregate([
+      {
+        $match: {
+          status: { $in: ["paid", "delivered"] } // Match documents with status "paid" or "delivered"
+        }
+      },
+      {
+        $unwind: "$orderItems"
+      },
+      {
+        $group: {
+          _id: "$orderItems.product",
+          totalAmount: { $sum: "$orderItems.amount" },
+          totalSales: { $sum: { $multiply: ["$orderItems.price", "$orderItems.amount"] } }
+        }
+      },
+      {
+        $lookup: {
+          from: "meals", // Ensure this matches your meals collection name
+          localField: "_id",
+          foreignField: "_id",
+          as: "productDetails"
+        }
+      },
+      {
+        $unwind: "$productDetails"
+      },
+      {
+        $project: {
+          _id: 0,
+          productId: "$_id",
+          name: "$productDetails.name",
+          description: "$productDetails.description",
+          image: "$productDetails.image",
+          category: "$productDetails.category",
+          totalAmount: 1,
+          totalSales: 1
+        }
+      },
+      {
+        $sort: { totalAmount: -1 } // Sort by total amount sold in descending order
+      },
+      {
+        $limit: 10 // Limit to top 10 best selling products
+      }
+    ]);
+
+    res.json({ bestSellingProducts });
+  } catch (error) {
+    console.error("Error fetching best selling products:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 const analytics = async (req, res) => {
   try {
@@ -126,4 +248,6 @@ const analytics = async (req, res) => {
 
 
 
-module.exports = { dashboardData, analytics }
+
+
+module.exports = { dashboardData, analytics, findBestSellingProducts, managerReport }

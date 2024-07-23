@@ -77,6 +77,64 @@ const updateUserPassword = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: "Success! Password updated." });
 };
 
+const verifyUser = async (req, res) => {
+  try {
+    const { id, status } = req.query;
+    console.log(status);
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+    if (status === 'accept') {
+      user.verified = true;
+    } else {
+      user.verified = false;
+    }
+
+    await user.save();
+
+    res.json({
+      success: true, data: user,
+    });
+  } catch (error) {
+    // Handle errors
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+};
+const rolesUpdate = async (req, res) => {
+  try {
+    let { email, role } = req.query;
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+    user.role = role;
+    await user.save();
+
+    res.json({
+      success: true, data: user,
+    });
+  } catch (error) {
+    // Handle errors
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+};
+
+
 // Exporting controller functions to be used in user routes.
 module.exports = {
   getAllUsers,
@@ -84,4 +142,6 @@ module.exports = {
   showCurrentUser,
   updateUser,
   updateUserPassword,
+  verifyUser,
+  rolesUpdate
 };

@@ -196,7 +196,7 @@ const updateOrder = async (req, res) => {
     payment.transaction_id = transactionId;
     payment.status = statusQuery
     await payment.save();
-    res.status(StatusCodes.OK).json({ order, payment })
+    return res.status(StatusCodes.OK).json({ order, payment })
   }
 
   res.status(StatusCodes.OK).json({ order })
