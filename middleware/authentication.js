@@ -1,4 +1,5 @@
 // authentication.js: Middleware for handling authentication and authorization of users.
+const { StatusCodes } = require('http-status-codes');
 
 const CustomError = require("../errors"); // Import custom error classes for error handling
 const { isTokenValid } = require("../utils"); // Utility function to validate JWT tokens
@@ -12,27 +13,23 @@ const { isTokenValid } = require("../utils"); // Utility function to validate JW
  * @param next - The next middleware function in the stack.
  */
 const authenticateUser = async (req, res, next) => {
-  // Extract token from Authorization header
-  const authHeader = req.headers.authorization;
-  console.log(authHeader)
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new CustomError.UnauthenticatedError("Authentication Invalid");
-  }
-
-  const token = authHeader.split(' ')[1]; 
-  // console.log('hhh', token);
-
-  if (!token) {
-    throw new CustomError.UnauthenticatedError("Authentication Invalid");
-  }
-
   try {
+    // Extract token from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({ msg: "Authentication Invalid" });
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({ msg: "Authentication Invalid" });
+    }
+
     const { name, userId, role } = isTokenValid({ token });
-    // console.log(name + " role");
     req.user = { name, userId, role };
     next();
   } catch (error) {
-    throw new CustomError.UnauthenticatedError("Authentication Invalid");
+    return res.status(StatusCodes.UNAUTHORIZED).json({ msg: "Authentication Invalid" });
   }
 };
 
@@ -46,9 +43,10 @@ const authenticateUser = async (req, res, next) => {
 const authorizePermissions = (...roles) => {
   return (req, res, next) => {
     // Check if the user's role is included in the allowed roles
+    console.log(roles);
     if (!roles.includes(req.user.role)) {
       console.log(req.user)
-      // If not, throw an unauthorized error
+      
       throw new CustomError.UnauthorizedError(
         "Unauthorized to access this route"
       );

@@ -32,7 +32,6 @@ const MealSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, "Please provide meal category"], // Category is required
-      enum: ["breakfast", "lunch", "snacks","juice","others"], // Enumerates the possible values for category
     },
     stock:{
       type:String,

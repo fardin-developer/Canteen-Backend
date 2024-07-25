@@ -4,7 +4,7 @@ const Meal = require("../models/Meal"); // Import the Meal model for database in
 const { StatusCodes } = require("http-status-codes"); // HTTP status codes for response status.
 const CustomError = require("../errors"); // Custom error classes for error handling.
 const path = require("path"); // Node.js path module for file path operations.
-
+const fs = require('fs');
 /**
  * Creates a new meal document in the database with the provided details in the request body.
  */
@@ -14,7 +14,7 @@ const createMeal = async (req, res) => {
     console.log(req.body);
 
     // // Generate image URL
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/Products/${req.file.filename}`;
+    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/Products/${req.file?.filename}`;
     req.body.image = imageUrl; // Add image URL to req.body
     console.log(req.body.image);
 
@@ -37,56 +37,129 @@ const createMeal = async (req, res) => {
  * Retrieves all meal documents from the database.
  */
 const getAllMeals = async (req, res) => {
-  const meals = await Meal.find({}); // Find all meals.
+  const meals = await Meal.find({stock:'available'}); // Find all meals.
   res.status(StatusCodes.OK).json({ meals, count: meals.length }); // Respond with all meals and their count.
 };
+const upDateByCategory = async (req, res) => {
+  const { category, availability } = req.query;
+  console.log('hittttt');
+  console.log('Availability:', availability);
+  console.log('Category:', category);
+
+  try {
+    const result = await Meal.updateMany(
+      { category: category },
+      { $set: { stock: availability } }
+    );
+    // console.log('Update Result:', result);
+    res.status(200).json({ message: 'Availability updated successfully', result });
+  } catch (error) {
+    console.error('Update Error:', error);
+    res.status(500).json({ message: 'An error occurred', error });
+  }
+};
+
+
 
 /**
  * Retrieves a single meal document based on the provided ID in the request parameters.
  */
 const getSingleMeal = async (req, res) => {
   const { id: mealId } = req.params; // Extract meal ID from request parameters.
-  const meal = await Meal.findOne({ _id: mealId }).populate("reviews"); // Find the meal and populate its reviews.
 
-  if (!meal) {
-    throw new CustomError.NotFoundError(`No meal with id: ${mealId}`); // Handle meal not found.
+  try {
+    const meal = await Meal.findOne({ _id: mealId }).populate("reviews");
+
+    if (!meal) {
+      throw new CustomError.NotFoundError(`No meal with id: ${mealId}`);
+    }
+
+    res.status(StatusCodes.OK).json({ meal });
+  } catch (error) {
+    // Handle errors, possibly log them, and send an appropriate response
+    console.error(error); // Log the error for debugging purposes
+
+    if (error instanceof CustomError.NotFoundError) {
+      res.status(StatusCodes.NOT_FOUND).json({ error: error.message });
+    } else {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'An unexpected error occurred.' });
+    }
   }
-
-  res.status(StatusCodes.OK).json({ meal }); // Respond with the found meal.
 };
+
 
 /**
  * Updates a meal document based on the provided ID in the request parameters with the details in the request body.
  */
 const updateMeal = async (req, res) => {
-  const { id: mealId } = req.params; // Extract meal ID from request parameters.
-  const meal = await Meal.findOneAndUpdate({ _id: mealId }, req.body, {
-    new: true, // Return the updated document.
-    runValidators: true, // Run model validators on update.
-  });
+  try {
+    const { id: mealId } = req.params; // Extract meal ID from request parameters.
 
-  if (!meal) {
-    throw new CustomError.NotFoundError(`No meal with id: ${mealId}`); // Handle meal not found.
+    // Find the existing meal document
+    const existingMeal = await Meal.findById(mealId);
+    if (!existingMeal) {
+      return res.status(StatusCodes.NOT_FOUND).json({ error: `No meal with id: ${mealId}` });
+    }
+
+    // Handle file upload if a new image is uploaded
+    if (req.file) {
+      // Generate new image URL
+      const imageUrl = `${req.protocol}://${req.get('host')}/uploads/Products/${req.file.filename}`;
+      req.body.image = imageUrl; // Add new image URL to req.body
+
+      // Remove existing image file from the server
+      const existingImagePath = path.join(__dirname, '../uploads/Products', path.basename(existingMeal.image));
+      fs.unlink(existingImagePath, (err) => {
+        if (err) {
+          console.error(`Failed to delete old image: ${err}`);
+        }
+      });
+    }
+
+    // Update the meal document with new data
+    const updatedMeal = await Meal.findOneAndUpdate({ _id: mealId }, req.body, {
+      new: true, // Return the updated document.
+      runValidators: true, // Run model validators on update.
+    });
+
+    res.status(StatusCodes.OK).json({ meal: updatedMeal }); // Respond with the updated meal.
+  } catch (error) {
+    console.error(error); // Log the error for debugging purposes.
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'An error occurred while updating the meal.' }); // Respond with a generic error message.
   }
-
-  res.status(StatusCodes.OK).json({ meal }); // Respond with the updated meal.
 };
+
 
 /**
  * Deletes a meal document based on the provided ID in the request parameters.
  */
 const deleteMeal = async (req, res) => {
   const { id: mealId } = req.params; // Extract meal ID from request parameters.
-  const meal = await Meal.findOne({ _id: mealId }); // Find the meal.
 
-  if (!meal) {
-    throw new CustomError.NotFoundError(`No meal with id: ${mealId}`); // Handle meal not found.
+  try {
+    const meal = await Meal.findOne({ _id: mealId }); // Find the meal.
+
+    if (!meal) {
+      return res.status(404).json({
+        success: false,
+        message: `No meal found with id: ${mealId}`
+      });
+    }
+
+    await meal.remove(); // Remove the meal document.
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Success! The meal has been removed." // Respond with success message.
+    });
+  } catch (error) {
+    console.error('Error deleting meal:', error); // Log the error for debugging
+
+    res.status(500).json({
+      success: false,
+      message: 'Server error while deleting meal'
+    });
   }
-
-  await meal.remove(); // Remove the meal document.
-  res
-    .status(StatusCodes.OK)
-    .json({ msg: "Success! The meal has been removed." }); // Respond with success message.
 };
 
 /**
@@ -130,4 +203,5 @@ module.exports = {
   updateMeal,
   deleteMeal,
   uploadImage,
+  upDateByCategory
 };

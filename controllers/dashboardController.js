@@ -42,6 +42,7 @@ const dashboardData = async (req, res) => {
     // Process each order to accumulate daily sales data
     for (const order of todaysOrders) {
       for (const item of order.orderItems) {
+
         const product = await Product.findById(item.product);
         const existingItem = dailySales.find(sale => sale.name === item.name);
 
@@ -100,12 +101,14 @@ const managerReport = async (req, res) => {
     let totalItems = 0;
     let paidOrder = 0;
     let pendingAmount = 0;
+    let paidAmount =0;
     let deliveredAmount = 0
 
     orders.forEach(order => {
       console.log(order.total);
       if (order.status === 'paid') {
         totalSales += order.total;
+        paidAmount+= order.total
         paidOrder++;
       }
       if (order.status === 'pending') {
@@ -130,6 +133,7 @@ const managerReport = async (req, res) => {
       paidOrder,
       totalItems,
       pendingAmount,
+      paidAmount,
       deliveredAmount
     });
   } catch (error) {

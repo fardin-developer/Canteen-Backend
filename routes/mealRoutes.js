@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { authenticateUser, authorizePermissions } = require("../middleware/authentication");
-const { createMeal, getAllMeals, getSingleMeal, updateMeal, deleteMeal, uploadImage } = require("../controllers/mealController");
+const { createMeal, getAllMeals, getSingleMeal, updateMeal, deleteMeal, uploadImage,upDateByCategory } = require("../controllers/mealController");
 const { getSingleMealReviews } = require("../controllers/reviewController");
 
 const storage = multer.diskStorage({
@@ -31,12 +31,15 @@ router
   .route("/")
   .post(upload.single('productImg'), createMeal)
   .get(getAllMeals);
+router
+  .route("/updateByCategory")
+  .get(upDateByCategory);
 
 router
   .route("/:id")
   .get(getSingleMeal)
-  .patch(updateMeal)
-  .delete([authenticateUser, authorizePermissions("admin")], deleteMeal);
+  .patch(upload.single('productImg'),updateMeal)
+  .delete([authenticateUser, authorizePermissions("admin", "manager")], deleteMeal);
 
 router.route("/:id/reviews").get(getSingleMealReviews);
 

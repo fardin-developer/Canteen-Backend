@@ -12,23 +12,27 @@ const { isTokenValid } = require('../utils/jwt')
  * newly created user object.
  */
 const register = async (req, res) => {
-  const { email, name, password, dept, rollno } = req.body;
-  const studentID = req.file ? req.file.path : null;
-  // console.log(req.file);
+  try {
+    const { email, name, password, dept, rollno } = req.body;
+    const studentID = req.file ? req.file.path : null;
 
-  const emailAlreadyExists = await User.findOne({ email });
-  if (emailAlreadyExists) {
-    throw new CustomError.BadRequestError("Email already exists");
+    const emailAlreadyExists = await User.findOne({ email });
+    if (emailAlreadyExists) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: "Email already exists" });
+    }
+
+    const isFirstAccount = (await User.countDocuments({})) === 0;
+    const role = isFirstAccount ? "admin" : "user";
+
+    const user = await User.create({ name, email, password, role, dept, rollno, studentID });
+    const tokenUserDetails = tokenParams(user);
+    attachCookiesToResponse({ res, user: tokenUserDetails });
+    res.status(StatusCodes.CREATED).json({ user });
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
-
-  const isFirstAccount = (await User.countDocuments({})) === 0;
-  const role = isFirstAccount ? "admin" : "user";
-
-  const user = await User.create({ name, email, password, role, dept, rollno, studentID });
-  const tokenUserDetails = tokenParams(user);
-  attachCookiesToResponse({ res, user: tokenUserDetails });
-  res.status(StatusCodes.CREATED).json({ user });
 };
+
 
 
 /**

@@ -13,9 +13,35 @@ const {
  * Retrieves all users with the role of 'user' from the database, excluding their passwords from the response.
  */
 const getAllUsers = async (req, res) => {
-  const users = await User.find({ role: "user" }).select("-password"); // Select all but exclude password.
-  res.status(StatusCodes.OK).json({ users });
+  const { page = 1, limit = 50 } = req.query; // Default to page 1 and limit 50 if not provided
+
+  try {
+    // Calculate the number of documents to skip
+    const skip = (page - 1) * limit;
+
+    // Find users with pagination, excluding the password field
+    const users = await User.find({ role: "user" })
+      .select("-password")
+      .limit(parseInt(limit))
+      .skip(skip);
+
+    // Get the total count of users to send along with the response
+    const totalUsers = await User.countDocuments({ role: "user" });
+
+    res.status(StatusCodes.OK).json({
+      users,
+      totalUsers,
+      totalPages: Math.ceil(totalUsers / limit),
+      currentPage: parseInt(page),
+    });
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: "An error occurred",
+      error,
+    });
+  }
 };
+
 
 /**
  * Retrieves a single user by their ID, excluding the password from the response. Checks permissions to ensure
