@@ -12,7 +12,7 @@ const path = require('path')
 const upload = multer({ dest: 'uploads/' });
 
 app.use(cors({
-  origin: '*',
+  origin: 'http://localhost:5173', 
   credentials: true,
 }));
 
