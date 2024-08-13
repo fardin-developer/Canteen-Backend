@@ -210,7 +210,7 @@ const analytics = async (req, res) => {
       {
         $match: {
           createdAt: { $gte: sevenDaysAgo },
-          status: "paid"
+          status: { $in: ['paid', 'delivered'] }
         }
       },
       {

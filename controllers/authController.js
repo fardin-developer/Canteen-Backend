@@ -13,7 +13,8 @@ const { isTokenValid } = require('../utils/jwt')
  */
 const register = async (req, res) => {
   try {
-    const { email, name, password, dept, rollno } = req.body;
+    const { email, name, phone, password, dept, rollno } = req.body;
+    console.log(typeof(phone));
     const studentID = req.file ? req.file.path : null;
 
     const emailAlreadyExists = await User.findOne({ email });
@@ -24,7 +25,8 @@ const register = async (req, res) => {
     const isFirstAccount = (await User.countDocuments({})) === 0;
     const role = isFirstAccount ? "admin" : "user";
 
-    const user = await User.create({ name, email, password, role, dept, rollno, studentID });
+    const user = await User.create({ name, email, phone, password, role, dept, rollno, studentID });
+    console.log(user);
     const tokenUserDetails = tokenParams(user);
     attachCookiesToResponse({ res, user: tokenUserDetails });
     res.status(StatusCodes.CREATED).json({ user });

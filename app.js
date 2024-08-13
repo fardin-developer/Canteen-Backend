@@ -12,7 +12,7 @@ const path = require('path')
 const upload = multer({ dest: 'uploads/' });
 
 app.use(cors({
-  origin: 'http://localhost:5173', 
+  origin: '*',
   credentials: true,
 }));
 
@@ -96,10 +96,11 @@ app.use(errorHandlerMiddleware);
 
 // Server setup and start
 const port = process.env.PORT || 8000; 
+const MONGO_URL = process.env.MONGO_URL || ''; 
 const start = async () => {
   try {
     console.log(process.env.MONGO_URL);
-    await connectDB('mongodb://localhost:27017'); 
+    await connectDB(MONGO_URL); 
     app.listen(port, () =>
       console.log(`Server is listening on port ${port}...`)
     ); // Start listening on the specified port
